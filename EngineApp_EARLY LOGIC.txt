@@ -1,0 +1,398 @@
+
+        //      A relic from a bygone age. Does nothing. I saved it to give perspective on the evolution of my understanding of these problems and coding expertise
+
+
+package Kermo_Evolution;             // All the classes and methods in this app are static
+
+import java.util.*;
+import java.awt.*;
+import javax.swing.*;
+import java.awt.event.*;
+import javax.swing.event.*;
+
+public class EngineApp_EARLY_LOGIC 
+{   
+    static final int worldSize = 1000;
+    static ViewPort viewPort = new ViewPort();           // the window through which we can view the world
+    static ToolPanel toolPanel = new ToolPanel();         // The ToolPanel contains handy items like controllers for the Camera and objects in the world
+    static Color [][] Frame = new Color [100][100];    // 1000 x 1000 virtual pixels in our display
+    static ArrayList<Polygon> Polygons = new ArrayList<Polygon>();
+ //   static ArrayList<ArrayList<ArrayList<Polygon>>> sortedPolys = new ArrayList<ArrayList<ArrayList<Polygon>>>();   // contains all of the created polygons for the 3D world
+    static ArrayList<Model> Models = new ArrayList<Model>();
+    static Camera camera;   // the camera gets inited at the midpoint of each axis, at an angle of zero with respect to each axis
+    
+    public static void main (String [] args)
+    {
+        new AppWindow();
+        camera = new Camera(500,500,500, 0,0,0);
+    }
+    
+    static class AppWindow extends JFrame       // this is the window that contains the main app: the View Port and Tool Panel
+    {
+        public AppWindow()
+        {
+            setSize(1300, 1000);
+            setResizable(false);
+            setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            add(viewPort, BorderLayout.CENTER);
+            add(toolPanel, BorderLayout.EAST);
+            setVisible(true);
+        }
+    }
+    
+    static class ViewPort extends JPanel   // The ViewPort is the JPanel that allows visualization of the 3D virtual world
+    {
+        public ViewPort()
+        {
+            setSize(100,100);         // 1000 x 1000 pixels
+            setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.LOWERED));     // needs an aesthetic border
+            setVisible(true);
+        }    
+        
+        public void paintComponent(Graphics g)      // This is the method that renders the actual frame to the ViewPort display
+        {
+         //   super.repaint();
+            
+            for (int y = 0; y < 100; ++y)          // A raster-renderer that proceeds along each virtual pixel in the display, of which there are
+                for (int x = 0; x < 100; ++x)      // 1000^2 , coloring each pixel as it moves from top to bottom, left to right 
+                {
+                    g.setColor(Frame[y][x]);
+                    g.drawRect(x, y, 0, 0);         // This is my solution to the problem of coloring a singular pixel using Java's pimarily
+                                                    // 2D-focused graphics facilities :
+                                                    // draw a rectangle at the pixel location with width x + 0 and height y + 0
+                }
+        }
+    }
+    
+    static class ToolPanel extends JPanel       // this is a side-panel adjacent to the View Port that allows the user to manipulate objects
+    {
+        public ToolPanel()
+        {
+            setSize(300, 1000);
+            setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.LOWERED));
+          //  add(new CameraTranslator());
+            setVisible(true);
+        }
+    }
+/*    static class CameraTranslator extends JPanel
+    { 
+        public CameraTranslator()
+        {
+            setSize(300,100);
+            setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.LOWERED));
+            setLayout(new BorderLayout());
+            
+            JButton up = new JButton("^");
+            up.addActionListener(new CameraTranslatorListener());
+            add(up, BorderLayout.NORTH);
+            JButton down = new JButton("v");
+            down.addActionListener(new CameraTranslatorListener());
+            add(down, BorderLayout.SOUTH);
+            JButton left = new JButton("<");
+            left.addActionListener(new CameraTranslatorListener());
+            add(left, BorderLayout.WEST);
+            JButton right = new JButton(">");
+            right.addActionListener(new CameraTranslatorListener());
+            add(right, BorderLayout.EAST);
+            
+            setVisible(true);          
+        }
+    }
+    
+    static class CameraTransformer extends JPanel
+    {
+        public CameraTransformer()
+        {
+            setSize(300,100);
+            setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.LOWERED));
+            setLayout(new BorderLayout());
+            
+            JButton up = new JButton("^");
+            up.addActionListener(new CameraTransformerListener());
+            add(up, BorderLayout.NORTH);
+            JButton down = new JButton("v");
+            down.addActionListener(new CameraTransformerListener());
+            add(down, BorderLayout.SOUTH);
+            JButton left = new JButton("<");
+            left.addActionListener(new CameraTransformerListener());
+            add(left, BorderLayout.WEST);
+            JButton right = new JButton(">");
+            right.addActionListener(new CameraTransformerListener());
+            add(right, BorderLayout.EAST);
+            
+            setVisible(true);
+        }
+    }
+    
+  /*  static class CameraTranslatorListener implements ActionListener
+    {
+        public void actionPerformed(ActionEvent e)
+        {
+            char c = ((JButton)e.getSource()).getText().charAt(0);
+            switch (c)
+            {
+                case '^' : CAMERA.Origin.Y += 100;       // absolute y-axis; not angle-adjusted yet
+                case 'v' : CAMERA.Origin.Y -= 100;
+                case '<' : CAMERA.Origin.X -= 100;
+                case '>' : CAMERA.Origin.X += 100;
+            }
+            CAMERA.Update();
+        }
+    }
+    
+    static class CameraTransformerListener implements ActionListener
+    {
+        public void actionPerformed(ActionEvent e)
+        {
+            char c = ((JButton)e.getSource()).getText().charAt(0);
+            switch (c)
+            {
+                case '^' : CAMERA.transform.Vert_Angle += 10;       
+                case 'v' : CAMERA.transform.Vert_Angle -= 10;
+                case '<' : CAMERA.transform.Hor_Angle -= 10;
+                case '>' : CAMERA.transform.Hor_Angle += 10;
+            }
+            CAMERA.Update();
+        }
+    }                                           */
+    static class Vertex    // a Vertex object contains x,y, and z coordinates, a color, and a link to its line or polygon
+    {
+        int X;              // all coordinates are integers, to make ray-hit-detection computations more straightforward and to save memory
+        int Y;              // Things like the slopes and distances of lines, as well as angle measures, are stored as doubles
+        int Z;
+        Color color;
+        Polygon polygon;
+        Line line;
+        
+        Vertex(int x, int y, int z)
+        {
+            X = x;
+            Y = y;
+            Z = z;
+        }
+        void setColor (Color c)
+        {
+            color = c;
+        }
+        void setPolygon(Polygon p)
+        {
+            polygon = p;
+        }
+    }
+    
+    static class Line
+    {
+        Vertex endpoint1;
+        Vertex endpoint2;
+        double XYslope;     // the slopes of the line within each plane
+        double XZslope;
+        double ZYslope;     
+        double length;      // the length of the line
+        double XY_Xint;     // all the intercepts
+        double XY_Yint;
+        double XZ_Xint;
+        double XZ_Zint;
+        double ZY_Zint;
+        double ZY_Yint;
+        Color color;        // the color of the line  
+        Polygon polygon;    // the polygon of which the line is a side, if there is one
+        String name;        // the name or tag or unique identifier of the line, useful in certain situations
+        Transform transform;    // the angular orientation of the line in 3D space
+        
+        Line(Vertex end1, Vertex end2)      // you can construct a line buy specifying two endpoints
+        {
+            endpoint1 = end1;
+            endpoint2 = end2;
+            XYslope = slope(endpoint1.X, endpoint2.X, endpoint1.Y, endpoint2.Y);
+            XZslope = slope(endpoint1.X, endpoint2.X, endpoint1.Z, endpoint2.Z);
+            ZYslope = slope(endpoint1.Z, endpoint2.Z, endpoint1.Y, endpoint2.Y);
+            length = distance(endpoint1, endpoint2);
+        }
+        Line(Vertex end1, Transform t)      // or by specifying a single endpoint, and a transform i.e. direction vector for the line
+        {
+      //      System.out.println("In Line constructor...");
+        //    System.out.println("Transform t = " + t.XY.angle + " , " + t.XZ.angle + " , " + t.ZY.angle);
+            endpoint1 =end1;
+            length = 1;
+            transform = t;
+            XYslope = slope(t.XY);
+            XZslope = slope(t.XZ);
+            ZYslope = slope(t.ZY);
+        }
+        Line(Vertex end1, double l, Transform t)    // lastly by specifying an origin, a transform, and a length
+        {
+            endpoint1 = end1;
+            length = l;
+            transform = t;
+            XYslope = slope(t.XY);
+            XZslope = slope(t.XZ);
+            ZYslope = slope(t.ZY);
+        }
+    }
+    
+    static double toRadians (double d)      // Netbeans is in Radians mode by default, and I don't know how to change that... :/
+    {
+        return (d*3.1415926)/180;
+    }
+    static double slope (Angle a)           // the slope is equivalent to the tangent of the angle of direction (important concept)
+                                            //  rise/run --> opposite/adjacent --> x/y
+    {
+        return Math.tan(toRadians(a.angle));
+    }
+    
+    static class Polygon
+    {
+        ArrayList<Vertex> vertices = new ArrayList<Vertex>();
+        ArrayList<Line> sides = new ArrayList<Line>();
+        Color color;
+        String name;
+        Transform transform;
+            
+        Polygon(String s, Color c, Transform t, Vertex ... verts)
+        {
+            for (Vertex v : verts)
+                vertices.add(v);  
+            color = c;
+            name = s;
+            transform = t;
+            Polygons.add(this);
+        }
+            
+        void addVertex(int x, int y, int z)
+        {
+            vertices.add(new Vertex(x,y,z));
+        }
+        void addVertex(Vertex v)
+        {
+            v.setColor(color);
+            vertices.add(v);
+        }
+    }
+    
+    static class Model
+    {
+        ArrayList<Polygon> polygons = new ArrayList<Polygon>();
+        Transform transform;
+        String name;
+        
+        Model(Polygon ... polys)
+        {
+            for (Polygon p : polys)
+                polygons.add(p);
+        }
+    }
+    
+    static class Angle
+    {
+        double angle;
+        
+        Angle(double a)
+        {
+            angle = a;
+            if (angle >= 360 || angle <= -360) angle = angle % 360;
+        }
+        void add(double d)
+        {
+            angle += d;
+            if (angle >= 360 || angle <= -360) angle = angle % 360;
+        }
+        void add(Angle a)
+        {
+            angle += a.angle;
+            if (angle >= 360 || angle <= -360) angle = angle % 360;
+        }
+        
+        void multiply(double d)
+        {
+            angle = angle * d;
+            if (angle >= 360 || angle <= -360) angle = angle * 360;
+        }
+    }
+    
+    static class Transform  // a Transform is essentially a direction vector, which is an ordered set of angle values representing
+                            // the angular orientation of an object in 3D space
+    {
+        static Angle XY;    // rotation about the Z-axis, in the XY plane (with X horizontal and Y vertical)
+        static Angle XZ;    // rotation about the Y-axis, in the XZ plane (with X horizontal and Z vertical)
+        static Angle ZY;    // rotation about the X-axis, in the ZY plane (Z horizontal, Y vertical)
+    
+        Transform(Angle xy, Angle xz, Angle zy)
+        {
+            XY = xy;
+            XZ = xz;
+            ZY = zy;
+        }
+    }
+    
+    
+    static double slope(double x1, double x2, double y1, double y2)
+    {
+        return (y2 - y1 )/ (x2 - x1);       // rise over run
+    }
+    
+    static double distance(double x1, double x2, double y1, double y2, double z1, double z2)        // find distance from 6 doubles
+    {
+        return Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1) + (z2-z1)*(z2-z1));
+    }
+    static double distance(Vertex v1, Vertex v2)        // or from 2 preconstructed Vertex objects (comes in handy in the code)
+    {
+        return Math.sqrt( (v2.X - v1.X)*(v2.X - v1.X) + (v2.Y - v1.Y)*(v2.Y - v1.Y) + (v2.Z - v1.Z)*(v2.Z - v1.Z) );
+    }
+    
+    
+    static class Camera             // The Camera object contains a set of rays or line segments each emanating from an origin Vertex
+    {
+        Vertex origin;
+        Transform transform;
+        static final double Vert_FoV = 120;    // 120 degrees of vision along the ZY plane (around the x axis) ; FoV stands for Field of Vision
+        static final double Hor_FoV = 150;     // 150 degrees of vision along the XZ plane (around the y)
+        static final int Rays = 100;       // 1000 x 1000 = 1000000 rays for 1000 x 1000 pixels
+    
+        double startingAngleXY;
+        double startingAngleXZ;
+        double startingAngleZY;
+        
+        double incrementAngleXZ = ( Hor_FoV / Rays ) ;     // the incremental angle difference between consecutive rays
+                                                            // equal to the FoV angle divided by the number of rays
+        double incrementAngleZY = ( Vert_FoV / Rays ) ;
+    
+        
+        Camera(int x, int y, int z, double XYang, double XZang, double ZYang)  // the Camera constructor takes 6 primitives and uses them to 
+                                                                               // construct its instance objects, rather than taking object args
+        {
+            origin = new Vertex(x,y,z);
+            transform = new Transform(new Angle(XYang), new Angle(XZang), new Angle(ZYang));
+            
+            startingAngleXY =  transform.XY.angle;   
+            startingAngleXZ = transform.XZ.angle + ( ( 180 - Hor_FoV ) / 2 );           // the proof of this is easier to see when drawn on a sheet of paper
+            startingAngleZY = transform.ZY.angle + ( ( 180 - Vert_FoV ) / 2 );          
+            Update();
+        }
+    
+        void Update ()   // this function computes a new origin and new rays for the camera based on changed translational and transform data
+                         // It then updates the frame and calls a repaint of the ViewPort panel
+        {
+            for (int y = 0; y < Rays; ++y)         // for each y angle, starting from the top
+                for (int x = 0; x < Rays; ++x)     // for each x angle, starting from the left
+                {
+                    Frame[y][x] = TraceRay(origin, new Angle(startingAngleXY), new Angle(startingAngleXZ + x * incrementAngleXZ), new Angle(startingAngleZY + y * incrementAngleZY));
+                }
+            viewPort.repaint();
+        }
+    
+        static Color TraceRay (Vertex origin, Angle XY, Angle XZ, Angle ZY)
+        {
+            if (Polygons.size() == 0) return Color.WHITE;
+            for (Polygon p : Polygons)
+                if (checkIntersection(new Line(origin, new Transform(XY, XZ, ZY)), p))
+                {
+                    return p.color;
+                }
+            return Color.WHITE; 
+        }
+        
+        static boolean checkIntersection(Line l, Polygon p)
+        {
+            return false;
+        }
+    }
